@@ -108,10 +108,10 @@ exports.testCmd = (rl, id) => {
             rl.question(` ${colorize(quiz.question,'red')}? `, answer => {
                 let resp = answer.toLowerCase().trim();
                 if (resp === quiz.answer.toLowerCase().trim()) {
-                    biglog('CORRECTO', 'green');
+                    biglog('Correcto', 'green');
                     rl.prompt();
                 } else {
-                    biglog('INCORRECTO', 'red');
+                    biglog('Incorrecto', 'red');
                     rl.prompt();
                 }
             });
@@ -138,11 +138,13 @@ exports.playCmd = rl => {
             biglog(`${score}`, 'magenta');
             rl.prompt();
         } else {
-            let id = Math.floor(Math.random()*toBeResolved.length);
+            let elem = Math.floor(Math.random()*toBeResolved.length);
+            let id = toBeResolved[elem];
             console.log(toBeResolved);
+            console.log(elem);
             console.log(id);
             let quiz = model.getByIndex(id);
-            toBeResolved.splice(id,1);
+            toBeResolved.splice(elem,1);
 
             rl.question(` ${colorize(quiz.question, 'red')}? `, answer => {
                 let resp = answer.toLowerCase().trim();
