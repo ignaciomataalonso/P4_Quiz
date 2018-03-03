@@ -124,8 +124,43 @@ exports.testCmd = (rl, id) => {
 };
 
 exports.playCmd = rl => {
-    log('Jugar.', 'red');
-    rl.prompt();
+
+    let nquizzes = model.count();
+    let score = 0;
+    let toBeResolved = [];
+    for (let i=0;i<nquizzes;i++) {
+        toBeResolved.push(i);
+    }
+    const playOne = () => {
+        if (toBeResolved.length===0) {
+            log('No hay nada más que preguntar.');
+            log('Fin del examen. Aciertos:');
+            biglog(`${score}`, 'magenta');
+            rl.prompt();
+        } else {
+            let id = Math.floor(Math.random()*toBeResolved.length);
+            console.log(toBeResolved);
+            console.log(id);
+            let quiz = model.getByIndex(id);
+            toBeResolved.splice(id,1);
+
+            rl.question(` ${colorize(quiz.question, 'red')}? `, answer => {
+                let resp = answer.toLowerCase().trim();
+                if (resp === quiz.answer.toLowerCase().trim()) {
+                    score=score+1;
+                    log(`CORRECTO - Lleva ${score} aciertos.`);
+                    playOne();
+                } else {
+                    log('INCORRECTO.');
+                    log('Fin del examen. Aciertos:')
+                    biglog(`${score}`, 'magenta');
+                    rl.prompt();
+                }
+            });
+        }
+    }
+
+    playOne();
 };
 
 exports.creditsCmd = rl => {
