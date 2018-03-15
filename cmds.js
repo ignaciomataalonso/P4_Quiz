@@ -156,72 +156,81 @@ exports.editCmd = (rl, id) => {
 
 exports.testCmd = (rl, id) => {
 
-    if (typeof id === "undefined") {
-        errorlog(`Falta el parámetro id.`);
-        rl.prompt();
-    } else {
-        try {
-            const quiz = model.getByIndex(id);
-            rl.question(` ${colorize(quiz.question,'red')}? `, answer => {
-                let resp = answer.toLowerCase().trim();
-                if (resp === quiz.answer.toLowerCase().trim()) {
-                    log('Su respuesta es correcta.')
-                    biglog('Correcta', 'green');
-                    rl.prompt();
-                } else {
-                    log('Su respuesta es incorrecta.')
-                    biglog('Incorrecta', 'red');
-                    rl.prompt();
-                }
-            });
-
-        } catch(error) {
-            errorlog(error.message);
-            rl.prompt();
+    validateId(id)
+    .then(id => models.quiz.findById(id))
+    .then(quiz => {
+        if(!quiz) {
+            throw new Error(`No existe un quiz asociado al id=${id}.`);
         }
-    }
+        return makeQuestion(rl, ` ${colorize(quiz.question, 'red')}? `)
+        .then(answer => {
+            if (answer.toLowerCase().trim() === quiz.answer.toLowerCase().trim()) {
+                log('Su respuesta es correcta.')
+                biglog('Correcta', 'green');
+                rl.prompt()
+            } else {
+                log('Su respuesta es incorrecta.')
+                biglog('Incorrecta', 'red');
+                rl.prompt();
+            }
+        })
+    })
+    .catch(error => {
+        errorlog(error.message);
+    })
+    .then(() => {
+        rl.prompt();
+    });
+
 };
 
 exports.playCmd = rl => {
 
-    let nquizzes = model.count();
     let score = 0;
     let toBeResolved = [];
-    for (let i=0;i<nquizzes;i++) {
-        toBeResolved.push(i);
-    }
-    const playOne = () => {
-        if (toBeResolved.length===0) {
-            log('No hay nada más que preguntar.');
-            log('Fin del examen. Aciertos:');
-            biglog(`${score}`, 'magenta');
-            rl.prompt();
-        } else {
-            let elem = Math.floor(Math.random()*toBeResolved.length);
-            let id = toBeResolved[elem];
-            console.log(toBeResolved);
-            console.log(elem);
-            console.log(id);
-            let quiz = model.getByIndex(id);
-            toBeResolved.splice(elem,1);
 
-            rl.question(` ${colorize(quiz.question, 'red')}? `, answer => {
-                let resp = answer.toLowerCase().trim();
-                if (resp === quiz.answer.toLowerCase().trim()) {
-                    score=score+1;
+    const playOne = () => {
+        return new Promise((resolve, reject) => {
+            if (toBeResolved.length <= 0) {
+                console.log("No hay nada mas que preguntar");
+                console.log("Fin del examen.");
+                console.log("Aciertos:");
+                resolve();
+                return;
+            }
+            let pos = Math.floor(Math.random() * toBeResolved.length);
+            let quiz = toBeResolved[pos];
+            toBeResolved.splice(pos, 1);
+            makeQuestion(rl, quiz.question + '?')
+            .then(answer => {
+                if (answer.toLowerCase().trim() === quiz.answer.toLowerCase().trim()) {
+                    score++;
                     log(`CORRECTO - Lleva ${score} aciertos.`);
-                    playOne();
+                    resolve(playOne());
                 } else {
                     log('INCORRECTO.');
-                    log('Fin del examen. Aciertos:')
+                    log(`Fin del juego. Aciertos:`);
                     biglog(`${score}`, 'magenta');
-                    rl.prompt();
+                    resolve();
                 }
-            });
-        }
+            })
+        })
     }
+    models.quiz.findAll({raw: true})
+    .then(quizzes => {
+        toBeResolved = quizzes;
+    })
+    .then(() => {
+        return playOne();
+    })
+    .catch(error => {
+        console.log(error);
+    })
+    .then(() => {
+        biglog(`${score}`, 'magenta');
+        rl.prompt();
+    })
 
-    playOne();
 };
 
 exports.creditsCmd = rl => {
